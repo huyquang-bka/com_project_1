@@ -33,7 +33,8 @@ class MainWindow(QMainWindow):
 
     def start_worker_1(self):
         self.thread[1] = DetectorThread(index=1)
-        self.thread[1].setup(r"D:\cam_thu_vien\ch09_C5_ra_chiều_tối_06012022.mp4", 'yolov5s.pt')
+        self.thread[1].setup(
+            r"huywang/Downloads/test.mp4", 'yolov5s.pt')
         self.thread[1].start()
         self.thread[1].signal.connect(self.my_function)
         self.uic.btn_start_cam1.setEnabled(False)
@@ -41,7 +42,8 @@ class MainWindow(QMainWindow):
 
     def start_worker_2(self):
         self.thread[2] = DetectorThread(index=2)
-        self.thread[2].setup(r"D:\cam_thu_vien\ch09_C5_ra_sáng_07012022.mp4", 'yolov5s.pt')
+        self.thread[2].setup(
+            r"huywang/Downloads/test.mp4", 'yolov5s.pt')
         self.thread[2].start()
         self.thread[2].signal.connect(self.my_function)
         self.uic.btn_start_cam2.setEnabled(False)
@@ -60,7 +62,8 @@ class MainWindow(QMainWindow):
     def my_function(self, img):
         img_c = img
         rgb_img = cv2.cvtColor(img_c, cv2.COLOR_BGR2RGB)
-        qt_img = QtGui.QImage(rgb_img.data, rgb_img.shape[1], rgb_img.shape[0], QtGui.QImage.Format_RGB888)
+        qt_img = QtGui.QImage(
+            rgb_img.data, rgb_img.shape[1], rgb_img.shape[0], QtGui.QImage.Format_RGB888)
         thread = self.sender().index
 
         if thread == 1:

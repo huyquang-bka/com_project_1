@@ -1,0 +1,10 @@
+numpy
+opencv-python
+PyQt5
+pandas
+pyyaml
+tqdm
+torch
+torchvision
+matplotlib
+seaborn
