@@ -1,10 +1,11 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
+import sys
 
 
-class Ui_MainWindow(object):
+class Ui_MainWindow():
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(407, 474)
+        MainWindow.resize(640, 480)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayout = QtWidgets.QGridLayout(self.centralwidget)
@@ -21,20 +22,21 @@ class Ui_MainWindow(object):
         self.btn_stop_cam2 = QtWidgets.QPushButton(self.centralwidget)
         self.btn_stop_cam2.setObjectName("btn_stop_cam2")
         self.gridLayout.addWidget(self.btn_stop_cam2, 2, 2, 1, 1)
-        self.img1 = QtWidgets.QLabel(self.centralwidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
+        self.img1 = QtWidgets.QLabel(self.centralwidget)
         sizePolicy.setHeightForWidth(self.img1.sizePolicy().hasHeightForWidth())
         self.img1.setSizePolicy(sizePolicy)
         self.img1.setStyleSheet("background:white;")
         self.img1.setText("")
         self.img1.setObjectName("img1")
         self.gridLayout.addWidget(self.img1, 1, 1, 1, 2)
-        self.img2 = QtWidgets.QLabel(self.centralwidget)
+
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
+        self.img2 = QtWidgets.QLabel(self.centralwidget)  
         sizePolicy.setHeightForWidth(self.img2.sizePolicy().hasHeightForWidth())
         self.img2.setSizePolicy(sizePolicy)
         self.img2.setStyleSheet("background:white;")
@@ -56,8 +58,6 @@ class Ui_MainWindow(object):
 
 
 if __name__ == "__main__":
-    import sys
-
     app = QtWidgets.QApplication(sys.argv)
     MainWindow = QtWidgets.QMainWindow()
     ui = Ui_MainWindow()

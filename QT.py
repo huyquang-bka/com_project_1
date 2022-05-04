@@ -7,7 +7,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtCore import pyqtSignal
 from PyQt5 import QtCore
-from App_UI import Ui_MainWindow
+from ui_display import Ui_MainWindow
 
 # Detector thread
 from Detector2 import DetectorThread
@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
     def start_worker_1(self):
         self.thread[1] = DetectorThread(index=1)
         self.thread[1].setup(
-            r"huywang/Downloads/test.mp4", 'yolov5s.pt')
+            r"test.mp4", 'yolov5s.pt')
         self.thread[1].start()
         self.thread[1].signal.connect(self.my_function)
         self.uic.btn_start_cam1.setEnabled(False)
@@ -43,7 +43,7 @@ class MainWindow(QMainWindow):
     def start_worker_2(self):
         self.thread[2] = DetectorThread(index=2)
         self.thread[2].setup(
-            r"huywang/Downloads/test.mp4", 'yolov5s.pt')
+            r"test.mp4", 'yolov5s.pt')
         self.thread[2].start()
         self.thread[2].signal.connect(self.my_function)
         self.uic.btn_start_cam2.setEnabled(False)

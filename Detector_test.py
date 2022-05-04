@@ -4,6 +4,7 @@ import os
 import sys
 from pathlib import Path
 import numpy as np
+import time
 
 # Torch
 import torch
@@ -14,6 +15,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow
 
 from PyQt5.QtCore import pyqtSignal, QObject
+from Wang.wang_funtion import post_data
 
 # Misc
 from models.common import DetectMultiBackend, letterbox
@@ -33,6 +35,7 @@ class DetectorThread(QtCore.QThread):
         # super(DetectorThread, self).__init__(parent)
         # id
         self.index = index
+        self.is_running = True
         # VARIABLES
         # file/dir/URL/glob, 0 for webcam
         self.source = r"C:\Users\Admin\Downloads\video-1636524259.mp4"
@@ -54,19 +57,26 @@ class DetectorThread(QtCore.QThread):
         self.dnn = False  # use OpenCV DNN for ONNX inference
 
     def setup(self, a_source, a_model):
-        self.source = a_source
+        self.source = int(a_source) if a_source == "0" else a_source
         self.model_file = a_model
 
     @torch.no_grad()
     def run(self):
+        count = 0
         cap = cv2.VideoCapture(self.source)
-        while True:
-            ret, img0 = cap.read()
+        while self.is_running:
+            count += 1
+            s = time.time()
+            ret, im0 = cap.read()
             if not ret:
                 break
+            # img0 = cv2.resize(im0, (100, 100))
+            # status_code = post_data("http://192.168.1.31:5000/image", img0, count)
+            status_code = 1
+            print(f"{self.index} {status_code} {time.time() - s} ")
             self.signal.emit(im0)
-            cv2.waitKey(1)
+            # cv2.waitKey(1)
 
     def stop(self):
         print('Stopping thread...', self.index)
-        self.terminate()
+        self.is_running = False
