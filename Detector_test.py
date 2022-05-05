@@ -75,7 +75,7 @@ class DetectorThread(QtCore.QThread):
             status_code = 1
             print(f"{self.index} {status_code} {time.time() - s} ")
             self.signal.emit(im0)
-            # cv2.waitKey(1)
+            cv2.waitKey(1)
 
     def stop(self):
         print('Stopping thread...', self.index)

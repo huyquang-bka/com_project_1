@@ -10,7 +10,7 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5 import QtCore
 from ui_display import Ui_MainWindow
 # Detector thread
-from Detector_test import DetectorThread
+from Detector2 import DetectorThread
 
 # Misc
 import numpy as np

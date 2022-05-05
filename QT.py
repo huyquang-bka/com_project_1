@@ -7,10 +7,10 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5.QtCore import pyqtSignal
 from PyQt5 import QtCore
-from ui_display import Ui_MainWindow
+from App_UI import Ui_MainWindow
 
 # Detector thread
-from Detector2 import DetectorThread
+from Detector_test import DetectorThread
 
 # Misc
 import numpy as np
