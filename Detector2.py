@@ -44,7 +44,7 @@ class DetectorThread(QtCore.QThread):
         self.device = 0  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         self.save_crop = False  # save cropped prediction boxes
         # filter by class: --class 0, or --class 0 2 3
-        self.classes = [2, 5, 7]
+        self.classes = [0, 1]
         self.agnostic_nms = True  # class-agnostic NMS
         self.line_thickness = 1  # bounding box thickness (pixels)
         self.hide_labels = False  # hide labels
@@ -136,7 +136,7 @@ class DetectorThread(QtCore.QThread):
             FPS = 1 // (time.time() - s)
             try:
                 s2 = time.time()
-                response = requests.post('http://192.168.1.33:8000/image', json=send_dict, timeout=0.03).text
+                response = requests.post('http://192.168.1.33:8000/image', json=send_dict, timeout=1).text
                 print(response + " time: " + str(time.time() - s2) + f" {self.index}")
             except:
                 print("error post")

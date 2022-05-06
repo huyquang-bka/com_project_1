@@ -40,7 +40,7 @@ class MainWindow(QMainWindow):
     def start_worker_1(self):
         self.thread[1] = DetectorThread(index=1)
         rstp1 = self.uic.list_cam1.currentText()
-        self.thread[1].setup(rstp1, 'yolov5s.pt')
+        self.thread[1].setup(rstp1, 'mask_yolov5.pt')
         self.thread[1].start()
         self.thread[1].signal.connect(self.my_function)
         self.uic.btn_start_1.setEnabled(False)
@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
     def start_worker_2(self):
         self.thread[2] = DetectorThread(index=2)
         rstp2 = self.uic.list_cam2.currentText()
-        self.thread[2].setup(rstp2, 'yolov5s.pt')
+        self.thread[2].setup(rstp2, 'mask_yolov5.pt')
         self.thread[2].start()
         self.thread[2].signal.connect(self.my_function)
         self.uic.btn_start_2.setEnabled(False)

@@ -110,7 +110,7 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         self.btn_start_2.setText(_translate("MainWindow", "START2"))
         self.list_cam2.setItemText(0, _translate("MainWindow",
                                                  "rtsp://admin:atin%402022@192.168.1.232/profile1/media.smp"))
-        self.list_cam2.setItemText(1, _translate("MainWindow", "test.mp4"))
+        self.list_cam2.setItemText(1, _translate("MainWindow", "2.mp4"))
         # self.img1.setText(_translate("MainWindow", "TextLabel"))
         # self.img2.setText(_translate("MainWindow", "TextLabel"))
         self.btn_start_3.setText(_translate("MainWindow", "START3"))
