@@ -1,6 +1,7 @@
 # Common
 import os
-os.environ["KMP_DUPLICATE_LIB_OK"]="TRUE"
+
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 # Torch
 import torch
 import torch.backends.cudnn as cudnn
@@ -19,6 +20,7 @@ from deep_sort_pytorch.utils.parser import get_config
 from deep_sort_pytorch.deep_sort import DeepSort
 import opt
 from utils.general import xyxy2xywh
+import requests
 
 
 # MAIN
@@ -42,8 +44,8 @@ class DetectorThread(QtCore.QThread):
         self.device = 0  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         self.save_crop = False  # save cropped prediction boxes
         # filter by class: --class 0, or --class 0 2 3
-        self.classes = range(80)
-        self.agnostic_nms = False  # class-agnostic NMS
+        self.classes = [2, 5, 7]
+        self.agnostic_nms = True  # class-agnostic NMS
         self.line_thickness = 1  # bounding box thickness (pixels)
         self.hide_labels = False  # hide labels
         self.hide_conf = False  # hide confidences
@@ -106,6 +108,7 @@ class DetectorThread(QtCore.QThread):
             # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
 
             # Process predictions
+            send_dict = {}
             for i, det in enumerate(pred):  # per image
                 if len(det):
                     # Rescale boxes from img_size to im0 size
@@ -126,11 +129,17 @@ class DetectorThread(QtCore.QThread):
                         for j, (output, conf) in enumerate(zip(outputs, confs)):
                             x1, y1, x2, y2 = output[0:4]
                             id = output[4]
+                            crop = im0[y1:y2, x1:x2]
+                            send_dict[str(id)] = np.array(crop, dtype=np.uint8).tolist()
                             cv2.rectangle(im0, (x1, y1), (x2, y2), (0, 255, 0), 2)
                             cv2.putText(im0, f"{id}", (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             FPS = 1 // (time.time() - s)
-            # status_code = post_data("http://localhost:5000/image", im0, count)
-            # print(status_code)
+            try:
+                s2 = time.time()
+                response = requests.post('http://192.168.1.33:8000/image', json=send_dict, timeout=0.03).text
+                print(response + " time: " + str(time.time() - s2) + f" {self.index}")
+            except:
+                print("error post")
             cv2.putText(im0, '%g FPS' % FPS, (0, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             print(f"Thread {self.index} FPS: {FPS}")
             self.signal.emit(im0)

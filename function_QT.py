@@ -16,6 +16,7 @@ from Detector2 import DetectorThread
 import numpy as np
 import cv2
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -110,6 +111,7 @@ class MainWindow(QMainWindow):
         if thread == 4:
             self.uic.img4.setPixmap(
                 QtGui.QPixmap.fromImage(qt_img).scaled(self.uic.img4.width(), self.uic.img4.height()))
+
     def add_CAM(self):
         _translate = QtCore.QCoreApplication.translate
         rstp = self.uic.text_rstp.toPlainText()
@@ -126,6 +128,7 @@ class MainWindow(QMainWindow):
         self.uic.list_cam3.removeItem(index)
         self.uic.list_cam4.removeItem(index)
         self.uic.text_rstp.clear()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
