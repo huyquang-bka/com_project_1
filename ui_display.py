@@ -105,7 +105,7 @@ class Ui_MainWindow(QtWidgets.QMainWindow):
         self.btn_delete_cam.setText(_translate("MainWindow", "DELETE CAM"))
         self.list_cam1.setItemText(0, _translate("MainWindow",
                                                  "rtsp://admin:atin%402022@192.168.1.232/profile1/media.smp"))
-        self.list_cam1.setItemText(1, _translate("MainWindow", "test.mp4"))
+        self.list_cam1.setItemText(1, _translate("MainWindow", r"D:\ForVinh\data.mp4"))
         self.btn_start_1.setText(_translate("MainWindow", "START1"))
         self.btn_start_2.setText(_translate("MainWindow", "START2"))
         self.list_cam2.setItemText(0, _translate("MainWindow",

@@ -16,6 +16,6 @@ while count <= 10:
     # frame_bytes = np.array(image, dtype=np.uint8).tolist()
     # data_send = pickle.dumps(dict_send)
     s = time.time()
-    response = requests.post(api, json=dict_send)
-    print(response.status_code, time.time() - s)
+    response = requests.post(api, json=dict_send, timeout=0.05).json()
+    print(response, time.time() - s)
     count += 1

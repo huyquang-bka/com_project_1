@@ -2,3 +2,5 @@
 .idea
 __pycache__
 test.mp4
+dist
+build

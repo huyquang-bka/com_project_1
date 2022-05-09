@@ -1,4 +1,5 @@
 # Common
+import json
 import os
 
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
@@ -22,6 +23,37 @@ import opt
 from utils.general import xyxy2xywh
 import requests
 
+id_dict = {}
+res_dict = {}
+
+
+class PostApi(QtCore.QThread):
+    signal = pyqtSignal(dict)
+
+    def __init__(self, index=0, parent=None):
+        super().__init__()
+        self.index = index
+        self.api = "http://192.168.1.33:8000/image"
+        self.is_running = True
+
+    def run(self):
+        global res_dict
+        while self.is_running:
+            send_dict = {}
+            try:
+                for key in id_dict.keys():
+                    send_dict[key] = id_dict[key]
+                res_dict = requests.post(self.api, json=send_dict).text
+                res_dict = json.loads(res_dict)
+                print("Class PostApi: ", res_dict)
+                # self.signal.emit(res_dict)
+            except:
+                print("Class PostApi: Error")
+
+    def stop(self):
+        print('Stopping thread...', self.index)
+        self.is_running = False
+
 
 # MAIN
 class DetectorThread(QtCore.QThread):
@@ -44,7 +76,7 @@ class DetectorThread(QtCore.QThread):
         self.device = 0  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         self.save_crop = False  # save cropped prediction boxes
         # filter by class: --class 0, or --class 0 2 3
-        self.classes = [0, 1]
+        self.classes = range(80)  # (80) range of classes
         self.agnostic_nms = True  # class-agnostic NMS
         self.line_thickness = 1  # bounding box thickness (pixels)
         self.hide_labels = False  # hide labels
@@ -81,8 +113,11 @@ class DetectorThread(QtCore.QThread):
         self.source = str(self.source)
         cap = cv2.VideoCapture(self.source)
         count = 0
+        global id_dict
+        global res_dict
         while self.is_running:
             ret, img0 = cap.read()
+            img0 = cv2.resize(img0, (1280, 720))
             if not ret:
                 break
             count += 1
@@ -108,7 +143,8 @@ class DetectorThread(QtCore.QThread):
             # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
 
             # Process predictions
-            send_dict = {}
+            id_dict_local = {}
+            spot_dict_local = {}
             for i, det in enumerate(pred):  # per image
                 if len(det):
                     # Rescale boxes from img_size to im0 size
@@ -130,16 +166,25 @@ class DetectorThread(QtCore.QThread):
                             x1, y1, x2, y2 = output[0:4]
                             id = output[4]
                             crop = im0[y1:y2, x1:x2]
-                            send_dict[str(id)] = np.array(crop, dtype=np.uint8).tolist()
+                            id_dict_local[str(id)] = np.array(crop, dtype=np.uint8).tolist()
+                            spot_dict_local[str(id)] = [x1, y1, x2, y2]
                             cv2.rectangle(im0, (x1, y1), (x2, y2), (0, 255, 0), 2)
-                            cv2.putText(im0, f"{id}", (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            FPS = 1 // (time.time() - s)
+            s_dict = time.time()
             try:
-                s2 = time.time()
-                response = requests.post('http://192.168.1.33:8000/image', json=send_dict, timeout=1).text
-                print(response + " time: " + str(time.time() - s2) + f" {self.index}")
+                del id_dict
+                id_dict = {}
+                for i in range(5):
+                    id_dict[str(i)] = 1
+                for key in res_dict:
+                    if key in id_dict_local.keys():
+                        x1, y1, x2, y2 = spot_dict_local[key]
+                        name = res_dict[key]
+                        cv2.putText(im0, f"{name}", (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             except:
-                print("error post")
+                pass
+            print("Time s_dict:", time.time() - s_dict)
+            FPS = 1 // (time.time() - s)
+
             cv2.putText(im0, '%g FPS' % FPS, (0, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             print(f"Thread {self.index} FPS: {FPS}")
             self.signal.emit(im0)

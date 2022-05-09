@@ -8,12 +8,14 @@ app = Flask(__name__)
 def post_image():
     data = request.json
     # recv_dict = pickle.loads(data)
+    new_dict = {}
     for k, v in data.items():
-        print(k, np.array(v, dtype=np.uint8).shape)
+        new_dict[k] = "Em gai"
+
     # image = data['image']
     # image = np.array(image, dtype=np.uint8)
     # print(image.shape)
-    return "Count objects: {}".format(len(data))
+    return new_dict
 
 
 if __name__ == '__main__':
