@@ -4,16 +4,12 @@ import time
 
 # QT
 import torch
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PyQt5 import QtGui
 from PyQt5.QtWidgets import QApplication, QMainWindow
-from PyQt5.QtCore import pyqtSignal
 from PyQt5 import QtCore
 from ui_display import Ui_MainWindow
 # Detector thread
-from Detector_test import DetectorThread
-import threading
-# Misc
-import numpy as np
+from Detector2 import DetectorThread, PostApi
 import cv2
 
 
@@ -39,22 +35,22 @@ class MainWindow(QMainWindow):
 
     def start_worker_1(self):
         self.thread[1] = DetectorThread(index=1)
-        # self.post_api_thread[1] = PostApi(index=1)
+        self.post_api_thread[1] = PostApi(index=1)
         rstp1 = self.uic.list_cam1.currentText()
         self.thread[1].setup(rstp1, 'yolov5s.pt')
         self.thread[1].start()
-        # self.post_api_thread[1].start()
+        self.post_api_thread[1].start()
         self.thread[1].signal.connect(self.my_function)
         self.uic.btn_start_1.setEnabled(False)
         self.uic.btn_stop_1.setEnabled(True)
 
     def start_worker_2(self):
         self.thread[2] = DetectorThread(index=2)
-        # self.post_api_thread[2] = PostApi(index=2)
+        self.post_api_thread[2] = PostApi(index=2)
         rstp2 = self.uic.list_cam2.currentText()
         self.thread[2].setup(rstp2, 'mask_yolov5.pt')
         self.thread[2].start()
-        # self.post_api_thread[2].start()
+        self.post_api_thread[2].start()
         self.thread[2].signal.connect(self.my_function)
         self.uic.btn_start_2.setEnabled(False)
         self.uic.btn_stop_2.setEnabled(True)
@@ -79,13 +75,13 @@ class MainWindow(QMainWindow):
 
     def stop_worker_1(self):
         self.thread[1].stop()
-        # self.post_api_thread[1].stop()
+        self.post_api_thread[1].stop()
         self.uic.btn_stop_1.setEnabled(False)
         self.uic.btn_start_1.setEnabled(True)
 
     def stop_worker_2(self):
         self.thread[2].stop()
-        # self.post_api_thread[2].stop()
+        self.post_api_thread[2].stop()
         self.uic.btn_stop_2.setEnabled(False)
         self.uic.btn_start_2.setEnabled(True)
 

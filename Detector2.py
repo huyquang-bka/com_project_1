@@ -15,7 +15,7 @@ from models.common import DetectMultiBackend, letterbox
 from utils.general import (check_img_size, cv2, non_max_suppression, scale_coords)
 from utils.torch_utils import select_device
 import time
-from Wang.wang_funtion import *
+import numpy as np
 from PyQt5.QtCore import pyqtSignal, QObject
 from deep_sort_pytorch.utils.parser import get_config
 from deep_sort_pytorch.deep_sort import DeepSort
@@ -25,6 +25,7 @@ import requests
 
 id_dict = {}
 res_dict = {}
+mutex = QtCore.QMutex()
 
 
 class PostApi(QtCore.QThread):
@@ -39,16 +40,18 @@ class PostApi(QtCore.QThread):
     def run(self):
         global res_dict
         while self.is_running:
+            s = time.time()
             send_dict = {}
-            try:
-                for key in id_dict.keys():
-                    send_dict[key] = id_dict[key]
-                res_dict = requests.post(self.api, json=send_dict).text
-                res_dict = json.loads(res_dict)
-                print("Class PostApi: ", res_dict)
-                # self.signal.emit(res_dict)
-            except:
-                print("Class PostApi: Error")
+            mutex.lock()
+            for key in id_dict.keys():
+                send_dict[key] = id_dict[key]
+            res_dict = requests.post(self.api, json=send_dict).text
+            res_dict = json.loads(res_dict)
+            # res_dict = {"1": "Em gai"}
+            print("Class PostApi: ", res_dict)
+            # self.signal.emit(res_dict)
+            mutex.unlock()
+            time.sleep(0.0001)
 
     def stop(self):
         print('Stopping thread...', self.index)
@@ -76,7 +79,7 @@ class DetectorThread(QtCore.QThread):
         self.device = 0  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         self.save_crop = False  # save cropped prediction boxes
         # filter by class: --class 0, or --class 0 2 3
-        self.classes = range(80)  # (80) range of classes
+        self.classes = [0]  # (80) range of classes
         self.agnostic_nms = True  # class-agnostic NMS
         self.line_thickness = 1  # bounding box thickness (pixels)
         self.hide_labels = False  # hide labels
@@ -138,10 +141,6 @@ class DetectorThread(QtCore.QThread):
             # NMS
             pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, self.classes, self.agnostic_nms,
                                        max_det=self.max_det)
-
-            # Second-stage classifier (optional)
-            # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
-
             # Process predictions
             id_dict_local = {}
             spot_dict_local = {}
@@ -157,6 +156,7 @@ class DetectorThread(QtCore.QThread):
                         xyxys.append([x1, y1, x2, y2])
                         confs.append(conf)
                         clss.append(cls)
+
                     xywhs = xyxy2xywh(torch.Tensor(xyxys))
                     confs = torch.Tensor(confs)
                     clss = torch.tensor(clss)
@@ -166,23 +166,23 @@ class DetectorThread(QtCore.QThread):
                             x1, y1, x2, y2 = output[0:4]
                             id = output[4]
                             crop = im0[y1:y2, x1:x2]
+                            # if count % 5 == 0:
                             id_dict_local[str(id)] = np.array(crop, dtype=np.uint8).tolist()
                             spot_dict_local[str(id)] = [x1, y1, x2, y2]
                             cv2.rectangle(im0, (x1, y1), (x2, y2), (0, 255, 0), 2)
-            s_dict = time.time()
-            try:
+                # if count % 5 == 0:
+                mutex.lock()
                 del id_dict
                 id_dict = {}
                 for i in range(5):
                     id_dict[str(i)] = 1
                 for key in res_dict:
-                    if key in id_dict_local.keys():
+                    if key in spot_dict_local.keys():
                         x1, y1, x2, y2 = spot_dict_local[key]
                         name = res_dict[key]
                         cv2.putText(im0, f"{name}", (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            except:
-                pass
-            print("Time s_dict:", time.time() - s_dict)
+                print("Class Images:", res_dict, spot_dict_local)
+                mutex.unlock()
             FPS = 1 // (time.time() - s)
 
             cv2.putText(im0, '%g FPS' % FPS, (0, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)

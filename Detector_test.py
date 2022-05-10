@@ -13,7 +13,7 @@ import json
 id_dict = {}
 res_dict = {}
 
-
+mutex = QtCore.QMutex()
 # is_running = True
 
 
@@ -25,21 +25,24 @@ class PostApi(QtCore.QThread):
         self.index = index
         self.api = "http://192.168.1.33:8000/image"
         self.is_running = True
+        # self.mutex = QtCore.QMutex()
+        # self.mutex = mutex
 
     def run(self):
         # global is_running
+        # global mutex
         global res_dict
         while self.is_running:
             send_dict = {}
-            try:
-                for key in id_dict.keys():
-                    send_dict[key] = id_dict[key]
-                res_dict = requests.post(self.api, json=send_dict).text
-                res_dict = json.loads(res_dict)
-                print("Class PostApi: ", res_dict)
-                # self.signal.emit(res_dict)
-            except:
-                print("Class PostApi: Error")
+            mutex.lock()
+            for key in id_dict.keys():
+                send_dict[key] = id_dict[key]
+            # res_dict = requests.post(self.api, json=send_dict).text
+            # res_dict = json.loads(res_dict)
+            print("Class PostApi: ", res_dict)
+            mutex.unlock()
+            self.signal.emit(send_dict)
+            time.sleep(0.001)
 
     def stop(self):
         # global is_running
@@ -57,6 +60,8 @@ class DetectorThread(QtCore.QThread):
         # id
         self.index = index
         self.is_running = True
+        # self.mutex = QtCore.QMutex()
+        # self.mutex = mutex
         # VARIABLES
         # file/dir/URL/glob, 0 for webcam
         self.source = r"C:\Users\Admin\Downloads\video-1636524259.mp4"
@@ -66,6 +71,7 @@ class DetectorThread(QtCore.QThread):
 
     def run(self):
         global id_dict
+        # global mutex
         # global is_running
         count = 0
         cap = cv2.VideoCapture(self.source)
@@ -77,26 +83,25 @@ class DetectorThread(QtCore.QThread):
             if not ret:
                 # cap = cv2.VideoCapture(self.source)
                 break
-            try:
-                del id_dict
-                id_dict = {}
-                for i in range(5):
-                    id_dict[str(i)] = 1
-                local_dict = id_dict.copy()
-                for key in res_dict:
-                    try:
-                        local_dict[key] = res_dict[key]
-                    except:
-                        pass
-                print("Class DetectorThread: ", local_dict)
-
-            except:
-                print("Class DetectorThread: Error")
+            mutex.lock()
+            del id_dict
+            id_dict = {}
+            for i in range(5):
+                id_dict[str(i)] = 1
+            local_dict = id_dict.copy()
+            for key in res_dict:
+                try:
+                    local_dict[key] = res_dict[key]
+                except:
+                    pass
+            print("Class DetectorThread: ", local_dict)
+            mutex.unlock()
             self.signal.emit(im0)
             # try:
             #     print(f"Index {self.index} fps:", 1 // (time.time() - s))
             # except:
             #     print(f"Index {self.index} fps > 1000")
+            print(f"Fps thread {self.index}:", 1 / (time.time() - s))
             cv2.waitKey(1)
 
     def stop(self):

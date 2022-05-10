@@ -1,27 +1,54 @@
 # Common
-import argparse
+import json
 import os
-import sys
-from pathlib import Path
-import numpy as np
 
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 # Torch
 import torch
 import torch.backends.cudnn as cudnn
 
 # QT
-from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtWidgets import QApplication, QMainWindow
-
-from PyQt5.QtCore import pyqtSignal, QObject
+from PyQt5 import QtCore
 
 # Misc
-from models.common import DetectMultiBackend
-from utils.datasets import IMG_FORMATS, VID_FORMATS, LoadImages, LoadStreams
-from utils.general import (LOGGER, check_file, check_img_size, check_imshow, check_requirements, colorstr, cv2,
-                           increment_path, non_max_suppression, print_args, scale_coords, strip_optimizer, xyxy2xywh)
-from utils.plots import Annotator, colors, save_one_box
-from utils.torch_utils import select_device, time_sync
+from models.common import DetectMultiBackend, letterbox
+from utils.general import (check_img_size, cv2, non_max_suppression, scale_coords)
+from utils.torch_utils import select_device
+import time
+from Wang.wang_funtion import *
+from PyQt5.QtCore import pyqtSignal, QObject
+from deep_sort_pytorch.utils.parser import get_config
+from deep_sort_pytorch.deep_sort import DeepSort
+import opt
+from utils.general import xyxy2xywh
+import requests
+
+id_dict = {}
+res_dict = {}
+
+
+class PostApi(QtCore.QThread):
+    signal = pyqtSignal(dict)
+
+    def __init__(self, index=0, parent=None):
+        super().__init__()
+        self.index = index
+        self.api = "http://192.168.1.33:8000/image"
+        self.is_running = True
+        self.mutex = QtCore.QMutex()
+
+    def run(self):
+        global res_dict
+        while self.is_running:
+            send_dict = {}
+            self.mutex.lock()
+            res_dict = {"1": "Em gai"}
+            # self.signal.emit(res_dict)
+            self.mutex.unlock()
+
+    def stop(self):
+        print('Stopping thread...', self.index)
+        self.is_running = False
 
 
 # MAIN
@@ -32,111 +59,130 @@ class DetectorThread(QtCore.QThread):
         super().__init__()
         # super(DetectorThread, self).__init__(parent)
         # id
+        self.is_running = True
         self.index = index
+        self.mutex = QtCore.QMutex()
         # VARIABLES
-        self.source = r"C:\Users\Admin\Downloads\video-1636524259.mp4"  # file/dir/URL/glob, 0 for webcam
-        self.model_file = 'yolov5s.pt'
+        self.source = r"C:\Users\Admin\Downloads\video-1636524259.mp4"
+        self.weights = 'yolov5s.pt'
         self.data = 'data/coco128.yaml'  # dataset.yaml path
-        self.imgsz = (640, 640)  # inference size (height, width)
+        self.imgsz = 640  # inference size (height, width)
         self.conf_thres = 0.25  # confidence threshold
         self.iou_thres = 0.45  # NMS IOU threshold
         self.max_det = 1000  # maximum detections per image
-        self.device = "cpu"  # cuda device, i.e. 0 or 0,1,2,3 or cpu
+        self.device = 0  # cuda device, i.e. 0 or 0,1,2,3 or cpu
         self.save_crop = False  # save cropped prediction boxes
-        self.classes = None  # filter by class: --class 0, or --class 0 2 3
-        self.agnostic_nms = False  # class-agnostic NMS
+        # filter by class: --class 0, or --class 0 2 3
+        self.classes = [0]  # (80) range of classes
+        self.agnostic_nms = True  # class-agnostic NMS
         self.line_thickness = 1  # bounding box thickness (pixels)
         self.hide_labels = False  # hide labels
         self.hide_conf = False  # hide confidences
-        self.half = False  # use FP16 half-precision inference
+        self.half = True  # use FP16 half-precision inference
         self.dnn = False  # use OpenCV DNN for ONNX inference
 
     def setup(self, a_source, a_model):
         self.source = a_source
-        self.model_file = a_model
+        self.weights = a_model
 
     @torch.no_grad()
     def run(self):
+        # Load deepsort
+        cfg = get_config()
+        cfg.merge_from_file(opt.config_deepsort)
+        deepsort = DeepSort(cfg.DEEPSORT.REID_CKPT,
+                            max_dist=cfg.DEEPSORT.MAX_DIST, min_confidence=cfg.DEEPSORT.MIN_CONFIDENCE,
+                            nms_max_overlap=cfg.DEEPSORT.NMS_MAX_OVERLAP,
+                            max_iou_distance=cfg.DEEPSORT.MAX_IOU_DISTANCE,
+                            max_age=cfg.DEEPSORT.MAX_AGE, n_init=cfg.DEEPSORT.N_INIT, nn_budget=cfg.DEEPSORT.NN_BUDGET,
+                            use_cuda=True)
+        # Load model
+        device = select_device(self.device)
+        model = DetectMultiBackend(self.weights, device=device, dnn=self.dnn)
+        stride, names, pt, jit, onnx = model.stride, model.names, model.pt, model.jit, model.onnx
+        imgsz = check_img_size(self.imgsz, s=stride)  # check image size
+
+        # Half
+        half = device.type != 'cpu'  # half precision only supported on CUDA
+        if half:
+            model.model.half() if self.half else model.model.float()
         print('Starting thread...', self.index)
         self.source = str(self.source)
-        is_file = Path(self.source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
-        is_url = self.source.lower().startswith(('rtsp://', 'rtmp://', 'http://', 'https://'))
-
-        if is_url and is_file:
-            self.source = check_file(self.source)  # download
-
-        # Load model
-        self.device = select_device(self.device)
-        model = DetectMultiBackend(self.model_file, device=self.device, dnn=self.dnn, data=self.data, fp16=self.half)
-        stride, names, pt = model.stride, model.names, model.pt
-        self.imgsz = check_img_size(self.imgsz, s=stride)  # check image size
-
-        # Dataloader
-        dataset = LoadImages(self.source, img_size=self.imgsz, stride=stride, auto=pt)
-        bs = 1  # batch_size
-
-        vid_path, vid_writer = [None] * bs, [None] * bs
-
-        # Run inference
-        model.warmup(imgsz=(1 if pt else bs, 3, *self.imgsz))  # warmup
-        dt, seen = [0.0, 0.0, 0.0], 0
-        for path, im, im0s, vid_cap, s in dataset:
-            t1 = time_sync()
+        cap = cv2.VideoCapture(self.source)
+        count = 0
+        global id_dict
+        global res_dict
+        while self.is_running:
+            ret, img0 = cap.read()
+            img0 = cv2.resize(img0, (1280, 720))
+            if not ret:
+                break
+            count += 1
+            s = time.time()
+            im0 = img0.copy()
+            img = letterbox(img0, self.imgsz, stride=32, auto=True)[0]
+            img = img.transpose((2, 0, 1))[::-1]  # HWC to CHW, BGR to RGB
+            im = np.ascontiguousarray(img)
             im = torch.from_numpy(im).to(self.device)
-            im = im.half() if model.fp16 else im.float()  # uint8 to fp16/32
+            im = im.half() if self.half else im.float()  # uint8 to fp16/32
             im /= 255  # 0 - 255 to 0.0 - 1.0
             if len(im.shape) == 3:
                 im = im[None]  # expand for batch dim
-            t2 = time_sync()
-            dt[0] += t2 - t1
 
-            # Inference 
+            # Inference
             pred = model(im, augment=False, visualize=False)
-            t3 = time_sync()
-            dt[1] += t3 - t2
 
             # NMS
             pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, self.classes, self.agnostic_nms,
                                        max_det=self.max_det)
-            dt[2] += time_sync() - t3
-
-            # Second-stage classifier (optional)
-            # pred = utils.general.apply_classifier(pred, classifier_model, im, im0s)
-
             # Process predictions
+            id_dict_local = {}
+            spot_dict_local = {}
             for i, det in enumerate(pred):  # per image
-                seen += 1
-
-                p, im0, frame = path, im0s.copy(), getattr(dataset, 'frame', 0)
-
-                p = Path(p)  # to Path
-                s += '%gx%g ' % im.shape[2:]  # print string
-                gn = torch.tensor(im0.shape)[[1, 0, 1, 0]]  # normalization gain whwh
-                imc = im0.copy() if self.save_crop else im0  # for save_crop
-                annotator = Annotator(im0, line_width=self.line_thickness, example=str(names))
                 if len(det):
                     # Rescale boxes from img_size to im0 size
                     det[:, :4] = scale_coords(im.shape[2:], det[:, :4], im0.shape).round()
-
-                    # Print results
-                    for c in det[:, -1].unique():
-                        n = (det[:, -1] == c).sum()  # detections per class
-                        s += f"{n} {names[int(c)]}{'s' * (n > 1)}, "  # add to string
-
                     # Write results
+                    xyxys, confs, clss = [], [], []
                     for *xyxy, conf, cls in reversed(det):
-                        c = int(cls)  # integer class
-                        label = None if self.hide_labels else (names[c] if self.hide_conf else f'{names[c]} {conf:.2f}')
-                        annotator.box_label(xyxy, label, color=colors(c, True))
-                        if self.save_crop:
-                            save_one_box(xyxy, imc, file=save_dir / 'crops' / names[c] / f'{p.stem}.jpg', BGR=True)
+                        x1, y1, x2, y2 = int(xyxy[0]), int(xyxy[1]), int(xyxy[2]), int(xyxy[3])
+                        # cv2.imwrite(f"LP_image/{x1}_{y1}_{x2}_{y2}.jpg", im0[y1:y2, x1:x2])
+                        xyxys.append([x1, y1, x2, y2])
+                        confs.append(conf)
+                        clss.append(cls)
 
-                # Stream results
-                im0 = annotator.result()
-                # cv2.imshow('Result', im0) #for displaying
-                self.signal.emit(im0)
-                cv2.waitKey(1)
+                    xywhs = xyxy2xywh(torch.Tensor(xyxys))
+                    confs = torch.Tensor(confs)
+                    clss = torch.tensor(clss)
+                    outputs = deepsort.update(xywhs.cpu(), confs.cpu(), clss, im0)
+                    if len(outputs) > 0:
+                        for j, (output, conf) in enumerate(zip(outputs, confs)):
+                            x1, y1, x2, y2 = output[0:4]
+                            id = output[4]
+                            crop = im0[y1:y2, x1:x2]
+                            id_dict_local[str(id)] = np.array(crop, dtype=np.uint8).tolist()
+                            spot_dict_local[str(id)] = [x1, y1, x2, y2]
+                            cv2.rectangle(im0, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+                self.mutex.lock()
+                del id_dict
+                id_dict = {}
+                for i in range(5):
+                    id_dict[str(i)] = 1
+                for key in res_dict:
+                    if key in id_dict_local.keys():
+                        x1, y1, x2, y2 = spot_dict_local[key]
+                        name = res_dict[key]
+                        cv2.putText(im0, f"{name}", (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
+                print("Class Images:", res_dict)
+                self.mutex.unlock()
+            FPS = 1 // (time.time() - s)
+
+            cv2.putText(im0, '%g FPS' % FPS, (0, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+            print(f"Thread {self.index} FPS: {FPS}")
+            self.signal.emit(im0)
+            cv2.waitKey(1)
 
     def stop(self):
         print('Stopping thread...', self.index)
-        self.terminate()
+        self.is_running = False

@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-image = cv2.imread('1.png')
+image = cv2.imread('download.jpg')
 gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 canny = cv2.Canny(gray, 120, 255, 1)
 cnts = cv2.findContours(canny, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
