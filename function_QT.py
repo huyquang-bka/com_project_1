@@ -9,7 +9,7 @@ from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5 import QtCore
 from ui_display import Ui_MainWindow
 # Detector thread
-from Detector2 import DetectorThread, PostApi
+from Detector2 import DetectorThread, PostApi, DetectorFace, DetectorFree
 import cv2
 
 
@@ -45,10 +45,10 @@ class MainWindow(QMainWindow):
         self.uic.btn_stop_1.setEnabled(True)
 
     def start_worker_2(self):
-        self.thread[2] = DetectorThread(index=2)
+        self.thread[2] = DetectorFace(index=2)
         self.post_api_thread[2] = PostApi(index=2)
         rstp2 = self.uic.list_cam2.currentText()
-        self.thread[2].setup(rstp2, 'mask_yolov5.pt')
+        self.thread[2].setup(rstp2)
         self.thread[2].start()
         self.post_api_thread[2].start()
         self.thread[2].signal.connect(self.my_function)
@@ -56,9 +56,9 @@ class MainWindow(QMainWindow):
         self.uic.btn_stop_2.setEnabled(True)
 
     def start_worker_3(self):
-        self.thread[3] = DetectorThread(index=3)
+        self.thread[3] = DetectorFree(index=3)
         rstp3 = self.uic.list_cam3.currentText()
-        self.thread[3].setup(rstp3, 'yolov5s.pt')
+        self.thread[3].setup(rstp3)
         self.thread[3].start()
         self.thread[3].signal.connect(self.my_function)
         self.uic.btn_start_3.setEnabled(False)
