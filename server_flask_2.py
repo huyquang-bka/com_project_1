@@ -11,7 +11,7 @@ def post_image():
     new_dict = {}
     for k, v in data.items():
         new_dict[k] = "Em gai"
-    time.sleep(3)
+    time.sleep(2)
 
     # image = data['image']
     # image = np.array(image, dtype=np.uint8)
