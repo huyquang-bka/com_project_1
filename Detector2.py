@@ -24,6 +24,8 @@ from utils.general import xyxy2xywh
 import requests
 import cv2
 import mediapipe as mp
+import base64
+import json
 
 mp_face_detection = mp.solutions.face_detection
 mp_drawing = mp.solutions.drawing_utils
@@ -40,7 +42,8 @@ class PostApi(QtCore.QThread):
     def __init__(self, index=0, parent=None):
         super().__init__()
         self.index = index
-        self.api = "http://192.168.1.33:8000/image"
+        self.api = "http://192.168.1.33:8000/image_post"
+        self.headers = {'Content-type': 'application/json', 'Accept': 'text/plain'}
         self.is_running = True
 
     def run(self):
@@ -48,9 +51,10 @@ class PostApi(QtCore.QThread):
         while self.is_running:
             mutex.lock()
             send_dict = id_dict.copy()
+            print("send_dict:", send_dict)
             mutex.unlock()
             try:
-                res = requests.post(self.api, json=send_dict, timeout=10).text
+                res = requests.post(self.api, json=json.dumps(send_dict), timeout=10, headers=self.headers).text
                 res = json.loads(res)
                 mutex.lock()
                 res_dict = res.copy()
@@ -127,12 +131,18 @@ class DetectorThread(QtCore.QThread):
         count = 0
         global id_dict
         global res_dict
+        count = 0
         while self.is_running:
             s = time.time()
-            ret, img0 = cap.read()
+            cap.grab()
+            ret, img0 = cap.retrieve()
             img0 = cv2.resize(img0, (1280, 720))
             if not ret:
-                break
+                count += 1
+                if count == 5:
+                    break
+                time.sleep(3)
+                continue
             count += 1
             im0 = img0.copy()
             img = letterbox(img0, self.imgsz, stride=32, auto=True)[0]
@@ -174,9 +184,11 @@ class DetectorThread(QtCore.QThread):
                         for j, (output, conf) in enumerate(zip(outputs, confs)):
                             x1, y1, x2, y2 = output[0:4]
                             id = output[4]
-                            crop = im0[y1:y2, x1:x2]
+                            crop = img0[y1:y2, x1:x2]
                             # if count % 5 == 0:
-                            id_dict_local[str(id)] = np.array(crop, dtype=np.uint8).tolist()
+                            byte_array = cv2.imencode('.jpg', crop)[1].tobytes()
+                            byte_base64 = base64.b64encode(byte_array).decode()
+                            id_dict_local[str(id)] = byte_base64
                             spot_dict_local[str(id)] = [x1, y1, x2, y2]
                             cv2.rectangle(im0, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     # if count % 5 == 0:
@@ -190,7 +202,7 @@ class DetectorThread(QtCore.QThread):
                             x1, y1, x2, y2 = spot_dict_local[key]
                             name = res_dict[key]
                             cv2.putText(im0, f"{name}", (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                    print("Class Images:", res_dict, spot_dict_local)
+                    print("Class Images:", res_dict.keys(), spot_dict_local.keys())
                     mutex.unlock()
 
             FPS = 1 // (time.time() - s)
@@ -240,8 +252,16 @@ class DetectorFaceDeepSort(QtCore.QThread):
         count = 0
         global id_dict
         global res_dict
+        count = 0
         while self.is_running:
-            ret, image = cap.read()
+            cap.grab()
+            ret, image = cap.retrieve()
+            if not ret:
+                count += 1
+                if count == 5:
+                    break
+                time.sleep(3)
+                continue
             image = cv2.resize(image, (1280, 720))
             if not ret:
                 break
@@ -280,8 +300,10 @@ class DetectorFaceDeepSort(QtCore.QThread):
                     x1, y1, x2, y2 = output[0:4]
                     id = output[4]
                     crop = image[y1:y2, x1:x2]
-                    # id_dict_local[str(id)] = np.array(crop, dtype=np.uint8).tolist()
-                    # spot_dict_local[str(id)] = [x1, y1, x2, y2]
+                    byte_array = cv2.imencode('.jpg', crop)[1].tobytes()
+                    byte_base64 = base64.b64encode(byte_array).decode()
+                    id_dict_local[str(id)] = byte_base64
+                    spot_dict_local[str(id)] = [x1, y1, x2, y2]
                     cv2.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
             mutex.lock()
@@ -289,12 +311,13 @@ class DetectorFaceDeepSort(QtCore.QThread):
             id_dict = {}
             for key, value in id_dict_local.items():
                 id_dict[key] = value
+            print("Id dict keys: ", id_dict.keys())
             for key in res_dict:
                 if key in spot_dict_local.keys():
                     x1, y1, x2, y2 = spot_dict_local[key]
                     name = res_dict[key]
                     cv2.putText(image, f"{name}", (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-            print("Class Images:", res_dict, spot_dict_local)
+            print("Class Images:", res_dict.keys(), spot_dict_local.keys())
             mutex.unlock()
             FPS = 1 // (time.time() - s)
 
@@ -333,9 +356,10 @@ class DetectorFree(QtCore.QThread):
         print(self.source, type(self.source))
         cap = cv2.VideoCapture(self.source)
         while self.is_running:
-            ret, image = cap.read()
+            cap.grab()
+            ret, image = cap.retrieve()
             if not ret:
-                self.is_running = False
+                break
             print("Camera is working...")
             print(image.shape)
             # s = time.time()

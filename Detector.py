@@ -22,6 +22,7 @@ from deep_sort_pytorch.deep_sort import DeepSort
 import opt
 from utils.general import xyxy2xywh
 import requests
+import base64
 
 id_dict = {}
 res_dict = {}

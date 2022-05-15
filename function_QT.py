@@ -1,15 +1,11 @@
-# Common
 import sys
 import time
-
-# QT
 import torch
 from PyQt5 import QtGui
 from PyQt5.QtWidgets import QApplication, QMainWindow
 from PyQt5 import QtCore
 from ui_display import Ui_MainWindow
-# Detector thread
-from Detector import DetectorThread
+from Detector2 import DetectorThread, DetectorFree, DetectorFaceDeepSort, PostApi
 import cv2
 
 
@@ -18,7 +14,7 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.uic = Ui_MainWindow()
         self.uic.setupUi(self)
-        # self.cap = cv2.VideoCapture()
+        self.cap = cv2.VideoCapture()
         self.thread = {}
         self.post_api_thread = {}
         self.uic.btn_add_cam.clicked.connect(self.add_CAM)
@@ -35,18 +31,18 @@ class MainWindow(QMainWindow):
 
     def start_worker_1(self):
         self.thread[1] = DetectorThread(index=1)
-        # self.post_api_thread[1] = PostApi(index=1)
+        self.post_api_thread[1] = PostApi(index=1)
         rstp1 = self.uic.list_cam1.currentText()
         self.thread[1].setup(rstp1, 'yolov5s.pt')
         self.thread[1].start()
-        # self.post_api_thread[1].start()
+        self.post_api_thread[1].start()
         self.thread[1].signal.connect(self.my_function)
         self.uic.btn_start_1.setEnabled(False)
         self.uic.btn_stop_1.setEnabled(True)
 
     def start_worker_2(self):
-        # self.thread[2] = DetectorFaceDeepSort(index=2)
-        # self.post_api_thread[2] = PostApi(index=2)
+        self.thread[2] = DetectorFaceDeepSort(index=2)
+        self.post_api_thread[2] = PostApi(index=2)
         rstp2 = self.uic.list_cam2.currentText()
         self.thread[2].setup(rstp2)
         self.thread[2].start()
@@ -56,7 +52,7 @@ class MainWindow(QMainWindow):
         self.uic.btn_stop_2.setEnabled(True)
 
     def start_worker_3(self):
-        # self.thread[3] = DetectorFree(index=3)
+        self.thread[3] = DetectorFree(index=3)
         rstp3 = self.uic.list_cam3.currentText()
         self.thread[3].setup(rstp3)
         self.thread[3].start()
@@ -75,13 +71,13 @@ class MainWindow(QMainWindow):
 
     def stop_worker_1(self):
         self.thread[1].stop()
-        # self.post_api_thread[1].stop()
+        self.post_api_thread[1].stop()
         self.uic.btn_stop_1.setEnabled(False)
         self.uic.btn_start_1.setEnabled(True)
 
     def stop_worker_2(self):
         self.thread[2].stop()
-        # self.post_api_thread[2].stop()
+        self.post_api_thread[2].stop()
         self.uic.btn_stop_2.setEnabled(False)
         self.uic.btn_start_2.setEnabled(True)
 
