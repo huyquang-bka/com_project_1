@@ -27,31 +27,6 @@ id_dict = {}
 res_dict = {}
 
 
-class PostApi(QtCore.QThread):
-    signal = pyqtSignal(dict)
-
-    def __init__(self, index=0, parent=None):
-        super().__init__()
-        self.index = index
-        self.api = "http://192.168.1.33:8000/image"
-        self.is_running = True
-        self.mutex = QtCore.QMutex()
-
-    def run(self):
-        global res_dict
-        while self.is_running:
-            send_dict = {}
-            self.mutex.lock()
-            res_dict = {"1": "Em gai"}
-            # self.signal.emit(res_dict)
-            self.mutex.unlock()
-
-    def stop(self):
-        print('Stopping thread...', self.index)
-        self.is_running = False
-
-
-# MAIN
 class DetectorThread(QtCore.QThread):
     signal = pyqtSignal(np.ndarray)
 
@@ -159,28 +134,17 @@ class DetectorThread(QtCore.QThread):
                         for j, (output, conf) in enumerate(zip(outputs, confs)):
                             x1, y1, x2, y2 = output[0:4]
                             id = output[4]
-                            crop = im0[y1:y2, x1:x2]
-                            id_dict_local[str(id)] = np.array(crop, dtype=np.uint8).tolist()
-                            spot_dict_local[str(id)] = [x1, y1, x2, y2]
+                            # crop = im0[y1:y2, x1:x2]
+                            # id_dict_local[str(id)] = np.array(crop, dtype=np.uint8).tolist()
+                            # spot_dict_local[str(id)] = [x1, y1, x2, y2]
                             cv2.rectangle(im0, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-                self.mutex.lock()
-                del id_dict
-                id_dict = {}
-                for i in range(5):
-                    id_dict[str(i)] = 1
-                for key in res_dict:
-                    if key in id_dict_local.keys():
-                        x1, y1, x2, y2 = spot_dict_local[key]
-                        name = res_dict[key]
-                        cv2.putText(im0, f"{name}", (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
-                print("Class Images:", res_dict)
-                self.mutex.unlock()
             FPS = 1 // (time.time() - s)
 
             cv2.putText(im0, '%g FPS' % FPS, (0, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             print(f"Thread {self.index} FPS: {FPS}")
             self.signal.emit(im0)
+            print(f"Time emit {time.time() - s}")
             cv2.waitKey(1)
 
     def stop(self):
